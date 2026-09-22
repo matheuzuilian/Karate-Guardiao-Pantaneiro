@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+
+    <!-- FRAGMENTO DO MENU LATERAL -->
+    <aside class="sidebar" th:fragment="sidebar(paginaAtiva)">
+        <div>
+            <div class="brand">
+                <div class="brand-icon">
+                    <!-- Imagem com caminho relativo do Thymeleaf -->
+                    <img th:src="@{/imagens/karate-icon.png}" alt="Logo Guardião Pantaneiro" class="brand-logo-img">
+                </div>
+                <div class="brand-info">
+                    <h2>Guardião Pantaneiro</h2>
+                    <p>6º BPM · Corumbá-MS</p>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <a th:href="@{/}" class="nav-item" th:classappend="${paginaAtiva == 'inicio' ? 'active' : ''}">
+                    <i class="bi bi-grid-fill"></i> Início
+                </a>
+                <a th:href="@{/alunos}" class="nav-item" th:classappend="${paginaAtiva == 'alunos' ? 'active' : ''}">
+                    <i class="bi bi-people-fill"></i> Alunos
+                </a>
+                <a th:href="@{/matriculas}" class="nav-item"
+                    th:classappend="${paginaAtiva == 'matriculas' ? 'active' : ''}">
+                    <i class="bi bi-card-checklist"></i> Matrículas
+                </a>
+                <a th:href="@{/turmas}" class="nav-item" th:classappend="${paginaAtiva == 'turmas' ? 'active' : ''}">
+                    <i class="bi bi-calendar-event"></i> Turmas
+                </a>
+                <a th:href="@{/graduacoes}" class="nav-item"
+                    th:classappend="${paginaAtiva == 'graduacoes' ? 'active' : ''}">
+                    <i class="bi bi-award-fill"></i> Histórico de Faixas
+                </a>
+            </nav>
+        </div>
+
+        <a th:href="@{/logout}" class="btn-logout">
+            <i class="bi bi-box-arrow-left"></i> Sair
+        </a>
+    </aside>
+
+</body>
+
+</html>

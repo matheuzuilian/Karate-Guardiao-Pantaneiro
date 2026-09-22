@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Histórico de Faixas - Guardião Pantaneiro</title>
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+</head>
+
+<body>
+
+    <!-- SIDEBAR COMPARTILHADO (Aba Ativa: Graduações) -->
+    <div th:replace="~{fragments/sidebar :: sidebar('graduacoes')}"></div>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="main-content">
+
+        <!-- CABEÇALHO DA PÁGINA -->
+        <header class="page-header">
+            <div class="header-title">
+                <h1>Histórico de Faixas</h1>
+                <p>Evolução técnica e graduações registradas</p>
+            </div>
+            <button type="button" class="btn-warning" onclick="abrirModalGraduacao()">
+                <i class="bi bi-plus-lg"></i> REGISTRAR GRADUAÇÃO
+            </button>
+        </header>
+
+        <!-- SELECIONAR ALUNO COM BUSCA / AUTOCOMPLETE -->
+        <div style="max-width: 360px; margin-bottom: 24px; position: relative;">
+            <label class="form-label" style="margin-bottom: 8px; display: block;">SELECIONAR ALUNO</label>
+
+            <div class="search-container" style="position: relative;">
+                <i class="bi bi-search"></i>
+                <input type="text" id="buscaAlunoSelect" class="search-input" placeholder="Digite o nome para buscar..."
+                    th:value="${alunoSelecionado != null ? alunoSelecionado.nome : ''}"
+                    onkeyup="filtrarDropdownAlunos()" onfocus="abrirDropdownAlunos()" autocomplete="off">
+            </div>
+
+            <!-- Lista Dropdown Suspensa -->
+            <ul id="dropdownAlunos"
+                style="display: none; position: absolute; top: 100%; left: 0; right: 0; background-color: var(--bg-card, #1E293B); border: 1px solid var(--border-color, #334155); border-radius: 8px; margin-top: 6px; padding: 6px 0; max-height: 220px; overflow-y: auto; z-index: 1000; list-style: none; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);">
+
+                <li th:each="aluno : ${alunos}" th:data-nome="${aluno.nome}"
+                    th:onclick="'selecionarAluno(' + ${aluno.idPessoa} + ')'" class="item-aluno-select"
+                    style="padding: 10px 16px; cursor: pointer; font-size: 14px; color: var(--text-primary, #F8FAFC); transition: background 0.2s;">
+                    <span th:text="${aluno.nome}">Marcos Oliveira</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- CARD DE PERFIL DO ALUNO (SÓ EXIBE SE HOUVER ALUNO SELECIONADO) -->
+        <section class="profile-card" th:if="${alunoSelecionado != null}">
+            <div class="profile-info-group">
+                <div class="profile-avatar" th:text="${#strings.substring(alunoSelecionado.nome, 0, 1)}">M</div>
+                <div class="profile-details">
+                    <h2 th:text="${alunoSelecionado.nome}">Marcos Oliveira da Silva</h2>
+                    <p
+                        th:text="${alunoService.calcularIdade(alunoSelecionado)} + ' anos · Nascido em ' + ${#temporals.format(alunoSelecionado.dataDeNascimento, 'dd/MM/yyyy')}">
+                        12 anos · Nascido em 12/03/2014
+                    </p>
+                </div>
+            </div>
+            <div class="profile-faixa-atual">
+                <span>FAIXA ATUAL</span>
+                <span class="badge-faixa"
+                    th:classappend="'badge-' + ${#strings.toLowerCase(alunoSelecionado.graduacao)}"
+                    th:text="${alunoSelecionado.graduacao}">Verde</span>
+            </div>
+        </section>
+
+        <!-- LINHA DO TEMPO DE GRADUAÇÕES -->
+        <section class="timeline-card" th:if="${alunoSelecionado != null}">
+            <div class="timeline-header"
+                th:text="'LINHA DO TEMPO DE GRADUAÇÕES — ' + ${#lists.size(historico)} + ' REGISTRO(S)'">
+                LINHA DO TEMPO DE GRADUAÇÕES — 2 REGISTRO(S)
+            </div>
+
+            <div th:if="${#lists.isEmpty(historico)}"
+                style="padding: 32px; text-align: center; color: var(--text-secondary);">
+                Nenhuma graduação registrada para este aluno ainda.
+            </div>
+
+            <div class="timeline-item" th:each="grad, iter : ${historico}">
+                <div class="timeline-left">
+                    <div class="timeline-badge-number" th:text="${#lists.size(historico) - iter.index}">2</div>
+                    <div class="timeline-date" th:text="${#temporals.format(grad.dataGraduacao, 'dd/MM/yyyy')}">
+                        15/11/2024</div>
+                    <div class="timeline-transition" style="display: flex; align-items: center; gap: 8px;">
+                        <!-- Faixa Anterior -->
+                        <span class="badge-faixa"
+                            th:classappend="'badge-' + ${#strings.toLowerCase(grad.faixaAnterior != null ? grad.faixaAnterior : 'branca')}"
+                            th:text="${grad.faixaAnterior != null ? grad.faixaAnterior : 'Branca'}">Branca</span>
+
+                        <!-- Setinha de Transição -->
+                        <i class="bi bi-chevron-right"
+                            style="color: var(--text-secondary); font-size: 12px; margin: 0 4px;"></i>
+
+                        <!-- Nova Faixa Obtida -->
+                        <span class="badge-faixa" th:classappend="'badge-' + ${#strings.toLowerCase(grad.faixa)}"
+                            th:text="${grad.faixa}">Amarela</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 16px;">
+
+                    <!-- BLOCO DE INFORMAÇÕES: EXAMINADORES E NOTA -->
+                    <div style="text-align: right; display: flex; flex-direction: column; gap: 2px;">
+
+                        <!-- NOME DOS EXAMINADORES -->
+                        <div class="timeline-examiner" style="font-weight: 600; color: #E2E8F0;"
+                            th:text="${grad.examinadores != null and !#strings.isEmpty(grad.examinadores) ? grad.examinadores : (grad.examinador != null and !#strings.isEmpty(grad.examinador) ? grad.examinador : 'Instrutor BPM')}">
+                            Sensei Marcos, Sensei Rodrigo
+                        </div>
+
+                        <!-- NOTA -->
+                        <div th:if="${grad.nota != null}" style="font-size: 12px; color: #94A3B8;">
+                            Nota: <span style="color: #22C55E; font-weight: 700;" th:text="${grad.nota}">8.5</span>
+                        </div>
+
+                    </div>
+
+                    <!-- BOTÃO DE EXCLUSÃO DE GRADUAÇÃO -->
+                    <a th:href="@{/graduacoes/deletar/{id}(id=${grad.idHistorico})}" class="btn-action delete"
+                        title="Excluir Registro"
+                        onclick="return confirm('Tem certeza que deseja excluir este registro de graduação?');"
+                        style="color: #EF4444; text-decoration: none; font-size: 16px; padding: 4px 8px; border-radius: 4px; transition: background 0.2s;">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL DE REGISTRO DE NOVA GRADUAÇÃO -->
+    <div class="modal-overlay" id="modalGraduacao">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <h2>Registrar Nova Graduação</h2>
+                    <p>Atualização de faixa do aluno</p>
+                </div>
+                <button type="button" class="btn-close-modal" onclick="fecharModalGraduacao()">&times;</button>
+            </div>
+
+            <form th:action="@{/graduacoes/salvar}" th:object="${novaGraduacao}" method="POST">
+                <div class="modal-body">
+
+                    <div class="form-group">
+                        <label class="form-label">Aluno</label>
+                        <select class="form-select" id="selectAlunoModal" th:field="*{aluno.idPessoa}"
+                            onchange="atualizarProximaFaixaSugerida()" required>
+                            <option th:each="a : ${alunos}" th:value="${a.idPessoa}" th:text="${a.nome}"
+                                th:data-faixa-atual="${a.graduacao}"
+                                th:selected="${alunoSelecionado != null and a.idPessoa == alunoSelecionado.idPessoa}">
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Nova Faixa / Graduação</label>
+                            <select class="form-select" id="selectFaixaNova" th:field="*{faixa}" required>
+                                <option value="Branca">Branca</option>
+                                <option value="Amarela">Amarela</option>
+                                <option value="Laranja">Laranja</option>
+                                <option value="Verde">Verde</option>
+                                <option value="Roxa">Roxa</option>
+                                <option value="Marrom">Marrom</option>
+                                <option value="Preta">Preta</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Data da Graduação</label>
+                            <input type="date" class="form-input" th:field="*{dataGraduacao}" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">NOTA OBTIDA</label>
+                            <input type="number" step="0.1" min="0" max="10" class="form-input" th:field="*{nota}"
+                                placeholder="Ex.: 8.5">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Examinadores</label>
+                        <input type="text" class="form-input" th:field="*{examinadores}"
+                            placeholder="Ex.: Sensei Marcos, Sensei Rodrigo">
+                        <small style="color: #94A3B8; font-size: 11px;">Separe os nomes por vírgula.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Observações Exame</label>
+                        <textarea class="form-textarea" th:field="*{observacao}"
+                            placeholder="Ex.: Exame do 2º semestre, mérito técnico..."></textarea>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="fecharModalGraduacao()">Cancelar</button>
+                    <button type="submit" class="btn-warning">REGISTRAR</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CARREGAR O ARQUIVO EXTERNO JS -->
+    <script th:src="@{/js/graduacao.js}"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Turmas - Guardião Pantaneiro</title>
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+</head>
+
+<body>
+
+    <!-- SIDEBAR COMPARTILHADO -->
+    <div th:replace="~{fragments/sidebar :: sidebar('turmas')}"></div>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="main-content">
+
+        <!-- CABEÇALHO DA PÁGINA -->
+        <header class="page-header">
+            <div class="header-title">
+                <h1>Turmas</h1>
+                <p th:text="${#lists.size(turmas)} + ' turmas cadastradas'">0 turmas cadastradas</p>
+            </div>
+            <button type="button" class="btn-warning" onclick="abrirModalTurma()">
+                <i class="bi bi-plus-lg"></i> NOVA TURMA
+            </button>
+        </header>
+
+        <!-- LISTA DE CARDS DE TURMAS -->
+        <div th:if="${#lists.isEmpty(turmas)}" class="turma-card"
+            style="text-align: center; color: var(--text-secondary); padding: 40px;">
+            Nenhuma turma cadastrada até o momento.
+        </div>
+
+        <div class="turma-card" th:each="turma : ${turmas}">
+            <div class="turma-header">
+                <div class="turma-title-group">
+                    <h2>
+                        <span th:text="${turma.nome}">Infantil Iniciante</span>
+                        <span class="badge-faixa"
+                            th:classappend="${turma.status == 'Inativa' ? 'badge-preta' : 'badge-verde'}"
+                            th:text="${turma.status != null ? turma.status : 'Ativa'}">Ativa</span>
+                    </h2>
+                    <div class="turma-instrutor"
+                        th:text="${turma.instrutor != null ? turma.instrutor : 'Instrutor BPM'}">Sd. Pm. Rodrigo Farias
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button type="button" class="btn-secondary" style="font-size: 12px; padding: 6px 12px;"
+                        th:data-id="${turma.idTurma}" th:data-nome="${turma.nome}" onclick="carregarAlunosTurma(this)">
+                        Ver Alunos
+                    </button>
+                    <button type="button" class="btn-action" title="Editar"
+                        th:onclick="'editarTurma(' + ${turma.idTurma} + ')'">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <a th:href="@{/turmas/deletar/{id}(id=${turma.idTurma})}" class="btn-action delete" title="Excluir"
+                        onclick="return confirm('Excluir esta turma?');">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- DETALHES -->
+            <div class="turma-details-grid">
+                <div class="detail-box">
+                    <div class="label">Dias</div>
+                    <div class="value"
+                        th:text="${turma.diasSemana != null and !#strings.isEmpty(turma.diasSemana) ? turma.diasSemana : 'A combinar'}">
+                        Seg · Qua · Sex</div>
+                </div>
+                <div class="detail-box">
+                    <div class="label">Horário</div>
+                    <div class="value" th:text="${turma.horarioInicio} + ' – ' + ${turma.horarioFim}">14:00 – 15:00
+                    </div>
+                </div>
+                <div class="detail-box">
+                    <div class="label">Faixa Etária</div>
+                    <div class="value" th:text="${turma.idadeMinima} + ' – ' + ${turma.idadeMaxima} + ' anos'">6 – 9
+                        anos</div>
+                </div>
+                <div class="detail-box">
+                    <div class="label">Vagas</div>
+                    <div class="value"
+                        th:text="${turmaService.contarMatriculadas(turma.idTurma)} + ' / ' + ${turma.vagasTotais}">0 /
+                        15</div>
+                </div>
+            </div>
+
+            <!-- BARRA DE OCUPAÇÃO -->
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill"
+                    th:style="'width: ' + (${turma.vagasTotais != null and turma.vagasTotais > 0 ? (turmaService.contarMatriculadas(turma.idTurma) * 100 / turma.vagasTotais) : 0}) + '%;'">
+                </div>
+            </div>
+            <div class="progress-label"
+                th:text="(${turma.vagasTotais != null and turma.vagasTotais > 0 ? (turmaService.contarMatriculadas(turma.idTurma) * 100 / turma.vagasTotais) : 0}) + '% ocupado'">
+                0% ocupado</div>
+        </div>
+
+    </main>
+
+    <!-- MODAL CONFIGURAÇÃO DA TURMA -->
+    <div class="modal-overlay" id="modalTurma">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <h2>Nova Turma</h2>
+                    <p>Configuração da turma</p>
+                </div>
+                <button type="button" class="btn-close-modal" onclick="fecharModalTurma()">&times;</button>
+            </div>
+
+            <form th:action="@{/turmas/salvar}" th:object="${turmaForm}" method="POST" id="formTurma"
+                onsubmit="prepararDias()">
+                <input type="hidden" id="turmaId" th:field="*{idTurma}">
+
+                <div class="modal-body">
+
+                    <!-- EXIBIR ALERTA DE ERRO DENTRO DO MODAL -->
+                    <div th:if="${mensagemErro}"
+                        style="background-color: #EF4444; color: #FFFFFF; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; font-size: 13px;">
+                        <i class="bi bi-exclamation-triangle-fill" style="margin-right: 8px;"></i>
+                        <span th:text="${mensagemErro}"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">NOME DA TURMA</label>
+                        <input type="text" class="form-input" th:field="*{nome}" placeholder="Ex.: Infantil Iniciante"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">DIAS DA SEMANA</label>
+                        <div class="day-checkbox-group">
+                            <input type="checkbox" id="seg" value="Seg" class="day-checkbox">
+                            <label for="seg" class="day-label">SEG</label>
+
+                            <input type="checkbox" id="ter" value="Ter" class="day-checkbox">
+                            <label for="ter" class="day-label">TER</label>
+
+                            <input type="checkbox" id="qua" value="Qua" class="day-checkbox">
+                            <label for="qua" class="day-label">QUA</label>
+
+                            <input type="checkbox" id="qui" value="Qui" class="day-checkbox">
+                            <label for="qui" class="day-label">QUI</label>
+
+                            <input type="checkbox" id="sex" value="Sex" class="day-checkbox">
+                            <label for="sex" class="day-label">SEX</label>
+
+                            <input type="checkbox" id="sab" value="Sáb" class="day-checkbox">
+                            <label for="sab" class="day-label">SÁB</label>
+
+                            <input type="checkbox" id="dom" value="Dom" class="day-checkbox">
+                            <label for="dom" class="day-label">DOM</label>
+                        </div>
+                        <!-- CAMPO ESCONDIDO VINCULADO AO THYMELEAF -->
+                        <input type="hidden" id="diasSemanaInput" th:field="*{diasSemana}">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">HORÁRIO INÍCIO</label>
+                            <input type="text" class="form-input" th:field="*{horarioInicio}" placeholder="09:00"
+                                maxlength="5" oninput="mascaraHorario(this)" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">HORÁRIO FIM</label>
+                            <input type="text" class="form-input" th:field="*{horarioFim}" placeholder="10:00"
+                                maxlength="5" oninput="mascaraHorario(this)" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">IDADE MÍN.</label>
+                            <input type="number" class="form-input" th:field="*{idadeMinima}" placeholder="6" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">IDADE MÁX.</label>
+                            <input type="number" class="form-input" th:field="*{idadeMaxima}" placeholder="17" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">VAGAS</label>
+                            <input type="number" class="form-input" th:field="*{vagasTotais}" placeholder="15" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">INSTRUTOR RESPONSÁVEL</label>
+                        <input type="text" class="form-input" th:field="*{instrutor}"
+                            placeholder="Ex.: 3º Sgt. Pm. Eduardo Lins" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">STATUS</label>
+                        <select class="form-select" th:field="*{status}">
+                            <option value="Ativa">Ativa</option>
+                            <option value="Inativa">Inativa</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="fecharModalTurma()">Cancelar</button>
+                    <button type="submit" class="btn-warning">SALVAR</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL ALUNOS DA TURMA -->
+    <div class="modal-overlay" id="modalVerAlunos">
+        <div class="modal-card" style="max-width: 520px;">
+            <div class="modal-header">
+                <div>
+                    <h2 id="modalTurmaNomeTitle">Alunos Matriculados</h2>
+                    <p id="modalTurmaSubTitle">Listagem de alunos ativos</p>
+                </div>
+                <button type="button" class="btn-close-modal" onclick="fecharModalAlunos()">&times;</button>
+            </div>
+
+            <div class="modal-body" style="max-height: 360px; overflow-y: auto;">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>ALUNO</th>
+                            <th>FAIXA</th>
+                            <th>DATA MATRÍCULA</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaAlunosTurma">
+                        <!-- Linhas carregadas dinamicamente via JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="fecharModalAlunos()">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CARREGAR O ARQUIVO EXTERNO JS -->
+    <script th:src="@{/js/turma.js}"></script>
+
+    <!-- BLOCO THYMELEAF (MANTIDO APENAS PARA VARIÁVEIS DE SERVIDOR) -->
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            /*[# th:if="${abrirModalErro}"]*/
+            const modal = document.getElementById('modalTurma');
+            if (modal) {
+                modal.classList.add('active');
+            }
+            /*[/]*/
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel Geral - Guardião Pantaneiro</title>
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+</head>
+<body>
+
+    <div th:replace="~{fragments/sidebar :: sidebar('inicio')}"></div>
+
+    <!-- PAINEL PRINCIPAL -->
+    <main class="main-content">
+        
+        <header class="header-title">
+            <h1>Projeto Karatê Guardião Pantaneiro</h1>
+            <p>Painel Geral</p>
+        </header>
+
+        <!-- CARDS METRICAS -->
+        <section class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+            <div class="card">
+                <div>
+                    <div class="card-title">Total de Alunos</div>
+                    <div class="card-value" th:text="${totalAlunos}">0</div>
+                </div>
+                <div class="card-icon"><i class="bi bi-people"></i></div>
+            </div>
+
+            <!-- 💡 NOVO CARD: MATRÍCULAS ATIVAS -->
+            <div class="card">
+                <div>
+                    <div class="card-title">Matrículas Ativas</div>
+                    <div class="card-value" style="color: #22C55E;" th:text="${totalMatriculasAtivas}">0</div>
+                </div>
+                <div class="card-icon" style="color: #22C55E;"><i class="bi bi-card-checklist"></i></div>
+            </div>
+
+            <div class="card">
+                <div>
+                    <div class="card-title">Graduações</div>
+                    <div class="card-value" th:text="${totalGraduacoes}">0</div>
+                </div>
+                <div class="card-icon"><i class="bi bi-graph-up-arrow"></i></div>
+            </div>
+
+            <div class="card">
+                <div>
+                    <div class="card-title">Última Graduação</div>
+                    <div class="card-value" style="font-size: 18px; margin-top: 16px;" 
+                         th:text="${ultimaGraduacao != null ? #temporals.format(ultimaGraduacao.dataGraduacao, 'dd/MM/yyyy') : 'Sem registros'}">
+                        Sem registros
+                    </div>
+                </div>
+                <div class="card-icon"><i class="bi bi-clock"></i></div>
+            </div>
+        </section>
+
+        <!-- DASHBOARD GRID (GRÁFICO + ÚLTIMAS GRADUAÇÕES) -->
+        <div class="dashboard-grid">
+            
+            <!-- Distribuição por Faixa (Gráfico Dinâmico) -->
+            <div class="card-section">
+                <div class="section-title">DISTRIBUIÇÃO POR FAIXA</div>
+                <div class="chart-container">
+                    
+                    <div class="bar-group" th:each="faixaItem : ${contagemPorFaixa}">
+                        <span style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;" 
+                              th:text="${faixaItem.value}">0</span>
+
+                        <div class="bar" 
+                             th:classappend="'badge-' + ${#strings.toLowerCase(faixaItem.key)}"
+                             th:style="'height: ' + (${totalAlunos > 0 ? (faixaItem.value * 120 / totalAlunos) : 4}) + 'px; min-height: 6px;'">
+                        </div>
+
+                        <span class="bar-label" th:text="${faixaItem.key}">Faixa</span>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Últimas Graduações -->
+            <div class="card-section">
+                <div class="section-title">ÚLTIMAS GRADUAÇÕES</div>
+                <div class="graduation-list">
+                    
+                    <div th:if="${#lists.isEmpty(ultimasGraduacoes)}" style="color: var(--text-secondary); font-size: 13px; padding: 16px 0;">
+                        Nenhuma graduação registrada.
+                    </div>
+
+                    <div class="graduation-item" th:each="grad : ${ultimasGraduacoes}">
+                        <div>
+                            <div class="person-name" th:text="${grad.aluno.nome}">Pedro Henrique</div>
+                            <div class="person-date" th:text="${#temporals.format(grad.dataGraduacao, 'dd/MM/yyyy')}">22/03/2025</div>
+                        </div>
+                        <span class="badge-faixa" 
+                              th:classappend="'badge-' + ${#strings.toLowerCase(grad.faixa)}" 
+                              th:text="${grad.faixa}">Marrom</span>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- TABELA ALUNOS RECENTES -->
+        <section class="card-section">
+            <div class="section-title">ALUNOS RECENTES</div>
+            
+            <table class="table-container">
+                <thead>
+                    <tr>
+                        <th>NOME</th>
+                        <th>IDADE</th>
+                        <th>FAIXA</th>
+                        <th>RESPONSÁVEL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:if="${#lists.isEmpty(alunosRecentes)}">
+                        <td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 16px;">Nenhum aluno cadastrado.</td>
+                    </tr>
+                    <tr th:each="aluno : ${alunosRecentes}">
+                        <td style="font-weight: 600;" th:text="${aluno.nome}">Sofia Duarte Mendes</td>
+                        <td th:text="${alunoService.calcularIdade(aluno)} + ' anos'">9 anos</td>
+                        <td>
+                            <span class="badge-faixa" 
+                                  th:classappend="'badge-' + ${#strings.toLowerCase(aluno.graduacao)}" 
+                                  th:text="${aluno.graduacao}">Branca</span>
+                        </td>
+                        <td th:text="${aluno.responsavel != null ? aluno.responsavel.nome : 'Sem Responsável'}">Paulo Mendes</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+    </main>
+
+</body>
+</html>

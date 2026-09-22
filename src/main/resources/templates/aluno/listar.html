@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Alunos - Guardião Pantaneiro</title>
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+</head>
+
+<body>
+
+    <!-- SIDEBAR COMPARTILHADO -->
+    <div th:replace="~{fragments/sidebar :: sidebar('alunos')}"></div>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="main-content">
+
+        <!-- CABEÇALHO -->
+        <header class="page-header">
+            <div class="header-title">
+                <h1>Alunos</h1>
+                <p th:text="${#lists.size(alunos)} + ' alunos matriculados'">0 alunos matriculados</p>
+            </div>
+            <button type="button" class="btn-primary" onclick="abrirModal()">
+                <i class="bi bi-plus-lg"></i> NOVO ALUNO
+            </button>
+        </header>
+
+        <!-- BARRA DE BUSCA -->
+        <div class="search-container">
+            <i class="bi bi-search"></i>
+            <input type="text" id="inputBusca" class="search-input" placeholder="Buscar por nome ou responsável..."
+                onkeyup="filtrarAlunos()">
+        </div>
+
+        <!-- TABELA DE ALUNOS -->
+        <section class="card-section">
+            <table class="table-container">
+                <thead>
+                    <tr>
+                        <th>NOME</th>
+                        <th>IDADE</th>
+                        <th>FAIXA</th>
+                        <th>RESPONSÁVEL</th>
+                        <th>TELEFONE</th>
+                        <th style="text-align: center;">AÇÕES</th> <!-- 💡 Centralizado -->
+                    </tr>
+                </thead>
+                <tbody id="tabelaAlunos">
+                    <tr th:if="${#lists.isEmpty(alunos)}">
+                        <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 20px;">
+                            Nenhum aluno cadastrado.
+                        </td>
+                    </tr>
+                    <tr th:each="aluno : ${alunos}">
+                        <td style="font-weight: 600;" th:text="${aluno.nome}">Marcos Oliveira da Silva</td>
+                        <td th:text="${alunoService.calcularIdade(aluno)} + ' anos'">12 anos</td>
+                        <td>
+                            <span class="badge-faixa" th:classappend="'badge-' + ${#strings.toLowerCase(aluno.graduacao)}"
+                                th:text="${aluno.graduacao}">Verde</span>
+                        </td>
+                        <td th:text="${aluno.responsavel != null ? aluno.responsavel.nome : 'Sem Responsável'}">Ana Paula da Silva</td>
+                        <td style="color: var(--text-secondary);" th:text="${aluno.responsavel != null ? aluno.responsavel.telefone : '-'}">(67) 99812-4521</td>
+                        <td>
+                            <!-- 💡 Flexbox justificado ao centro -->
+                            <div class="action-buttons" style="justify-content: center;">
+                                <button type="button" class="btn-action" title="Editar"
+                                    th:onclick="'editarAluno(' + ${aluno.idPessoa} + ')'">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+
+                                <a th:href="@{/alunos/deletar/{id}(id=${aluno.idPessoa})}" class="btn-action delete" title="Excluir"
+                                    onclick="return confirm('Tem certeza que deseja excluir este aluno?');">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+
+                                <button type="button" class="btn-warning" title="Histórico de Competições"
+                                    style="padding: 6px 10px; margin-right: 4px;" th:data-id="${aluno.idPessoa}"
+                                    th:data-nome="${aluno.nome}" onclick="abrirModalCompeticoes(this)">
+                                    <i class="bi bi-trophy-fill"></i>
+                                </button>
+
+                                <button type="button" class="btn-primary" title="Documentos e Atestados"
+                                    style="padding: 6px 10px; margin-right: 4px; background-color: #3B82F6; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                                    th:data-id="${aluno.idPessoa}" th:data-nome="${aluno.nome}" onclick="abrirModalDocumentos(this)">
+                                    <i class="bi bi-paperclip"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+    </main>
+
+    <!-- MODAL NOVO ALUNO -->
+    <div class="modal-overlay" id="modalNovoAluno">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <h2>Novo Aluno</h2>
+                    <p>Cadastro — Projeto Guardião Pantaneiro</p>
+                </div>
+                <button type="button" class="btn-close-modal" onclick="fecharModal()">&times;</button>
+            </div>
+
+            <form th:action="@{/alunos/salvar}" th:object="${alunoForm}" method="POST" id="formAluno" autocomplete="off">
+                <input type="hidden" id="alunoIdPessoa" th:field="*{idPessoa}">
+                <div class="modal-body">
+                    <div th:if="${abrirModalErro != null and abrirModalErro and mensagemErro != null}" id="alertaErroModal"
+                        style="background-color: #EF4444; color: #FFFFFF; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 8px;">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <span th:text="${mensagemErro}"></span>
+                    </div>
+
+                    <div class="form-section-title">Dados da Criança</div>
+                    <div class="form-group">
+                        <label class="form-label">Nome Completo</label>
+                        <input type="text" class="form-input" th:field="*{nome}" placeholder="Ex.: João Pedro da Silva" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Data de Nascimento</label>
+                            <input type="date" class="form-input" th:field="*{dataDeNascimento}" min="2007-12-31" max="2025-12-31" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Faixa Atual</label>
+                            <select class="form-select" th:field="*{graduacao}" required>
+                                <option value="Branca">Branca</option>
+                                <option value="Amarela">Amarela</option>
+                                <option value="Laranja">Laranja</option>
+                                <option value="Verde">Verde</option>
+                                <option value="Roxa">Roxa</option>
+                                <option value="Marrom">Marrom</option>
+                                <option value="Preta">Preta</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Tamanho do Quimono</label>
+                        <input type="text" class="form-input" th:field="*{tamanhoQuimono}" placeholder="Ex.: M2, A1, M" required>
+                    </div>
+
+                    <div class="form-section-title">Dados do Responsável</div>
+                    <div style="display: flex; gap: 16px; margin-bottom: 8px;">
+                        <label style="font-size: 12px; cursor: pointer; color: var(--text-primary);">
+                            <input type="radio" name="tipoResp" value="existente"
+                                th:checked="${alunoForm == null or alunoForm.responsavel == null or alunoForm.responsavel.idPessoa != null}"
+                                onclick="alternarResponsavel('existente')"> Selecionar Existente
+                        </label>
+                        <label style="font-size: 12px; cursor: pointer; color: var(--text-primary);">
+                            <input type="radio" name="tipoResp" value="novo"
+                                th:checked="${alunoForm != null and alunoForm.responsavel != null and alunoForm.responsavel.idPessoa == null and alunoForm.responsavel.nome != null}"
+                                onclick="alternarResponsavel('novo')"> Cadastrar Novo
+                        </label>
+                    </div>
+
+                    <div id="boxRespExistente" class="form-group">
+                        <label class="form-label">Responsável Legal Cadastrado</label>
+                        <select class="form-select" id="selectResp" th:field="*{responsavel.idPessoa}">
+                            <option value="" selected>Selecione um responsável cadastrado...</option>
+                            <option th:each="resp : ${responsaveis}" th:value="${resp.idPessoa}"
+                                th:text="${resp.nome} + ' - Tel: ' + ${resp.telefone}">João Silva - Tel: (67) 99999-0000
+                            </option>
+                        </select>
+                    </div>
+
+                    <div id="boxRespNovo" style="display: none; flex-direction: column; gap: 12px;">
+                        <div class="form-group">
+                            <label class="form-label">Nome do Responsável</label>
+                            <input type="text" class="form-input" th:field="*{responsavel.nome}" placeholder="Nome completo do pai, mãe ou tutor">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Parentesco</label>
+                                <input type="text" class="form-input" th:field="*{responsavel.parentesco}" placeholder="Ex.: Mãe, Pai, Avó">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Telefone / WhatsApp</label>
+                                <input type="text" class="form-input" id="inputTelefone" th:field="*{responsavel.telefone}"
+                                    placeholder="(67) 99999-9999" maxlength="15" pattern="\(\d{2}\) \d{4,5}-\d{4}"
+                                    oninvalid="this.setCustomValidity('Informe um telefone válido no formato (00) 90000-0000.')"
+                                    oninput="this.setCustomValidity(''); mascaraTelefone(this)">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">CPF do Responsável</label>
+                                <input type="text" class="form-input" id="inputCPF" th:field="*{responsavel.cpf}"
+                                    placeholder="000.000.000-00" maxlength="14" pattern="\d{3}\.\d{3}\.\d{3}-\d{2}"
+                                    oninvalid="this.setCustomValidity('Informe um CPF válido no formato 000.000.000-00.')"
+                                    oninput="this.setCustomValidity(''); mascaraCPF(this)">
+                            </div>
+                        </div>
+                        <div class="form-section-title">Observações Médicas</div>
+                        <div class="form-group">
+                            <textarea class="form-textarea" th:field="*{observacoesMedicas}"
+                                placeholder="Alergias, condições crônicas, medicamentos em uso..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="fecharModal()">Cancelar</button>
+                    <button type="submit" class="btn-save">SALVAR</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DE COMPETIÇÕES DO ALUNO -->
+    <div class="modal-overlay" id="modalCompeticoes">
+        <div class="modal-card" style="max-width: 600px;">
+            <div class="modal-header">
+                <div>
+                    <h2 id="modalCompeticaoNomeTitle">Competições</h2>
+                    <p>Histórico do Atleta</p>
+                </div>
+                <button type="button" class="btn-close-modal" onclick="fecharModalCompeticoes()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="formNovaCompeticao" style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 8px; border: 1px solid #1E293B; margin-bottom: 24px;">
+                    <input type="hidden" id="compIdAluno" name="idAluno">
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 2;">
+                            <label class="form-label">CAMPEONATO</label>
+                            <input type="text" id="compNome" class="form-input" placeholder="Ex: Copa Pantanal 2026" required>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label class="form-label">DATA</label>
+                            <input type="date" id="compData" class="form-input" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">MODALIDADE</label>
+                            <select id="compModalidade" class="form-select">
+                                <option value="Kata Individual">Kata Individual</option>
+                                <option value="Kumite Individual">Kumite Individual</option>
+                                <option value="Kata em Equipe">Kata em Equipe</option>
+                                <option value="Kumite em Equipe">Kumite em Equipe</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">COLOCAÇÃO</label>
+                            <select id="compColocacao" class="form-select">
+                                <option value="1º Lugar (Ouro)">1º Lugar (Ouro)</option>
+                                <option value="2º Lugar (Prata)">2º Lugar (Prata)</option>
+                                <option value="3º Lugar (Bronze)">3º Lugar (Bronze)</option>
+                                <option value="Participação">Participação</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="text-align: right; margin-top: 8px;">
+                        <button type="button" class="btn-warning" onclick="salvarCompeticaoViaJS()">+ Adicionar Medalha</button>
+                    </div>
+                </form>
+                <div style="max-height: 250px; overflow-y: auto;">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>DATA / CAMPEONATO</th>
+                                <th>MODALIDADE</th>
+                                <th>COLOCAÇÃO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaCompeticoes"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE DOCUMENTOS DO ALUNO -->
+    <div class="modal-overlay" id="modalDocumentos">
+        <div class="modal-card" style="max-width: 600px;">
+            <div class="modal-header">
+                <div>
+                    <h2 id="modalDocNomeTitle">Documentos</h2>
+                    <p>Atestados, Termos e Certificados</p>
+                </div>
+                <button type="button" class="btn-close-modal" onclick="fecharModalDocumentos()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="formUploadDocumento" onsubmit="fazerUploadDocumento(event)" style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 8px; border: 1px solid #1E293B; margin-bottom: 24px;">
+                    <input type="hidden" id="docIdAluno" name="idAluno">
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 1;">
+                            <label class="form-label">TIPO DE DOCUMENTO</label>
+                            <select id="docTipo" name="tipoDocumento" class="form-select" required>
+                                <option value="Atestado Médico">Atestado Médico</option>
+                                <option value="Termo de Responsabilidade">Termo de Responsabilidade</option>
+                                <option value="Documento de Identidade">Documento de Identidade</option>
+                                <option value="Certificado de Graduação">Certificado de Graduação</option>
+                                <option value="Outros">Outros</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 2;">
+                            <label class="form-label">ARQUIVO (PDF ou Imagem)</label>
+                            <input type="file" id="docArquivo" name="file" class="form-input" style="padding: 8px;" accept=".pdf, .jpg, .jpeg, .png" required>
+                        </div>
+                    </div>
+                    <div style="text-align: right; margin-top: 8px;">
+                        <button type="submit" id="btnUploadDoc" class="btn-primary" style="background-color: #3B82F6; color: white; border: none; border-radius: 4px; padding: 8px 16px; font-weight: 600; cursor: pointer;">
+                            <i class="bi bi-cloud-arrow-up-fill"></i> Salvar Documento
+                        </button>
+                    </div>
+                </form>
+                <div style="max-height: 250px; overflow-y: auto;">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>TIPO DO DOCUMENTO</th>
+                                <th>ARQUIVO</th>
+                                <th style="text-align: right;">AÇÕES</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaDocumentos"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CARREGAR O ARQUIVO EXTERNO JS -->
+    <script th:src="@{/js/aluno.js}"></script>
+
+    <!-- BLOCO THYMELEAF (MANTIDO APENAS PARA VARIÁVEIS DE SERVIDOR) -->
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            /*[# th:if="${abrirModalErro}"]*/
+            const modal = document.getElementById('modalNovoAluno');
+            if (modal) {
+                modal.classList.add('active');
+
+                /*[# th:if="${tipoRespDevolvido != null}"]*/
+                const tipoResp = /*[[${tipoRespDevolvido}]]*/ 'existente';
+                alternarResponsavel(tipoResp);
+
+                const radioOption = document.querySelector('input[name="tipoResp"][value="' + tipoResp + '"]');
+                if (radioOption) radioOption.checked = true;
+                /*[/]*/
+            }
+            /*[/]*/
+        });
+    </script>
+</body>
+</html>
