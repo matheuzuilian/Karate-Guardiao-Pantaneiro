@@ -35,14 +35,14 @@ public class ResponsavelModel extends PessoaModel {
     // --- VALIDAÇÕES SOBREPOSTAS PARA O RESPONSÁVEL ---
 
     @Override
-    @NotBlank(message = "O CPF do responsável é obrigatório.")
+    // @NotBlank(message = "O CPF do responsável é obrigatório.")
     @Pattern(regexp = "^(\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}|\\d{11})$", message = "CPF inválido. Digite 11 números ou no formato 000.000.000-00.")
     public String getCpf() {
         return super.getCpf();
     }
 
     @Override
-    @NotBlank(message = "O telefone de contato é obrigatório.")
+    // @NotBlank(message = "O telefone de contato é obrigatório.")
     @Pattern(regexp = "^(\\(\\d{2}\\)\\s?\\d{4,5}-\\d{4}|\\d{10,11})$", message = "Informe um telefone válido no formato (00) 90000-0000.")
     public String getTelefone() {
         return super.getTelefone();
