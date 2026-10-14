@@ -28,6 +28,7 @@ public class PessoaModel {
     @Column(name = "telefone", nullable = true)
     private String telefone;
 
+    // @NotBlank(message = "O CPF é obrigatório.")
     @Column(name = "cpf", nullable = true)
     private String cpf;
 
